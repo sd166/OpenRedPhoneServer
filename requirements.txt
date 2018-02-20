@@ -3,3 +3,4 @@ simplejson>=3.11.1
 futures>=3.0.5
 tornadis>=0.8.0
 momoko>=2.2.4
+django>=2.0.0
