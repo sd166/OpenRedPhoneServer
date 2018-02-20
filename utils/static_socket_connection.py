@@ -41,31 +41,37 @@ class StaticSocketConnection(object):
             self._handler = None
             self._stream.close()
 
+    def clear_callbacks(self):
+        self._on_open_callbacks = []
+        self._on_close_callbacks = []
+
     def add_on_open_callback(self, callback):
         self._on_open_callbacks.append(callback)
 
     def add_on_close_callback(self, callback):
         self._on_close_callbacks.append(callback)
 
-    def on_close(self, *args, **kwargs):
-        for callback in self._on_close_callbacks:
+    @staticmethod
+    def _execute_callbacks(queue, *args, **kwargs):
+        # type: (list, tuple, dict) -> None
+        for i in range(len(queue)):
+            callback = queue.pop()
             try:
                 callback(*args, **kwargs)
             except Exception as e:
-                Log.e(TAG, "on_close callback execute error", e)
-        Log.d(TAG, "clear _on_close_callbacks queue")
-        self._on_close_callbacks = []
+                Log.e(TAG, "callback execute error", e)
+        Log.d(TAG, "callbacks execution done")
+
+    def on_close(self, *args, **kwargs):
+        self._execute_callbacks(self._on_close_callbacks, *args, **kwargs)
+
+    def on_open(self, *args, **kwargs):
+        self._execute_callbacks(self._on_open_callbacks, *args, **kwargs)
 
     def accept_connection(self):
         if self._stream.closed():
             return self.abort()
-        for callback in self._on_open_callbacks:
-            try:
-                callback(
-                    *self._handler.open_args, **self._handler.open_kwargs
-                )
-            except Exception as e:
-                Log.e(TAG, "executing callback error", e)
+        self.on_open(*self._handler.open_args, **self._handler.open_kwargs)
         self._receive_data()
 
     def write_headers(self, start_line, headers, chunk=None, callback=None):

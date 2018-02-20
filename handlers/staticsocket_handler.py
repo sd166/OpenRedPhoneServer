@@ -13,7 +13,7 @@ TAG = "StaticSocketHandler"
 class StaticSocketHandler(tornado.web.RequestHandler):
 
     _status_code = None
-    _static_connection = None
+    _static_connection = None  # type: StaticSocketConnection
     open_args = None
     open_kwargs = None
 
@@ -37,12 +37,57 @@ class StaticSocketHandler(tornado.web.RequestHandler):
 
     def on_close(self, *args, **kwargs):
         Log.d(TAG, "on_open %r" % id(self))
-        if not self.is_closed:
+        if not self.is_closed and self.is_static:
             self.is_closed = True
             if self._static_connection is not None:
                 self._static_connection.abort()
                 self._static_connection = None
             super(StaticSocketHandler, self)._break_cycles()
+
+    def static_flush(self, include_footers=False, callback=None):
+        chunk = b"".join(self._write_buffer)
+        self._write_buffer = []
+        for transform in self._transforms:
+            self._status_code, self._headers, chunk = \
+                transform.transform_first_chunk(
+                    self._status_code, self._headers,
+                    chunk, include_footers)
+        if self.request.method == "HEAD":
+            chunk = None
+
+        if hasattr(self, "_new_cookie"):
+            for cookie in self._new_cookie.values():
+                self.add_header("Set-Cookie", cookie.OutputString(None))
+
+        start_line = tornado.httputil.ResponseStartLine(self.request.version,
+                                                self._status_code,
+                                                self._reason)
+        if self._static_connection:
+            self._static_connection.write_headers(
+                start_line, self._headers, chunk
+            )
+            return self._static_connection._stream.write(
+                chunk, callback=callback
+            )
+
+    def static_finish(self, chunk=None):
+        if self._status_code == 304:
+            assert not self._write_buffer, "Cannot send body with 304"
+            self._clear_headers_for_304()
+        elif "Content-Length" not in self._headers:
+            content_length = sum(len(part) for part in self._write_buffer)
+            self.set_header("Content-Length", content_length)
+        self.static_flush(include_footers=True)
+
+    def finish(self, *args, **kwargs):
+        if not self.is_static:
+            super(StaticSocketHandler, self).finish(*args, **kwargs)
+        else:
+            self.static_finish(*args, **kwargs)
+
+    def close(self, *args, **kwargs):
+        self.finish(*args, **kwargs)
+        self.on_close()
 
     def r400(self):
         self.set_status(400, "Bad Request")
