@@ -7,6 +7,7 @@ import tornado.web
 import logging
 import settings as s
 from info.s1z.utils.log import Log
+from handlers.main_handler import MainHandler
 
 
 TAG = "Main"
@@ -14,13 +15,16 @@ TAG = "Main"
 
 def main():
     initializer = dict(
-        # rabbit_sender=rabbit_sender,
-        # rabbit_rpc=rabbit_rpc,
-        # redis_client=redis_client,
-        # auth_client=auth_client
+        relay=object(),
+        push=object(),
+        session=object()
     )
     application = tornado.web.Application([
-        #
+        (
+            r'^/session/(?P<device_id>\d+)/(?P<number>[0-9\+]{3,15})$',
+            MainHandler,
+            initializer
+        )
     ])
     server = tornado.httpserver.HTTPServer(application)
     server.listen(s.SERVER_PORT, s.SERVER_HOST)

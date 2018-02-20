@@ -20,6 +20,34 @@ class StaticSocketHandler(tornado.web.RequestHandler):
     is_static = False
     is_closed = False
 
+    @staticmethod
+    def static(real_func):
+
+        def basic_auth(wrap_func):
+            @tornado.web.asynchronous
+            def deco(self, *args, **kwargs):
+                def callback():
+                    return wrap_func(self, *args, **kwargs)
+                self.auth(callback)
+            return deco
+
+        @basic_auth
+        def wrapper(self, *args, **kwargs):
+            if not self.is_static:
+                self.start_static()
+                real_func(self, *args, **kwargs)
+        return wrapper
+
+    @tornado.gen.coroutine
+    def auth(self, callback):
+        Log.d(TAG, "auth")
+        callback()
+        #try:
+        #    raise NotImplementedError()
+        #except NotImplementedError as e:
+        #    Log.e(TAG, "auth is not implemented", e)
+        #self.r500()
+
     def start_static(self, *args, **kwargs):
         self.open_args = args
         self.open_kwargs = kwargs
@@ -105,6 +133,10 @@ class StaticSocketHandler(tornado.web.RequestHandler):
 
     def r404(self):
         self.set_status(404)
+        self.finish()
+
+    def r500(self):
+        self.set_status(500)
         self.finish()
 
     def __del__(self):

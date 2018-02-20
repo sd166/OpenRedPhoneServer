@@ -5,7 +5,6 @@ import tornado.iostream
 import tornado.httputil as httputil
 from tornado.escape import native_str, utf8
 from info.s1z.utils.log import Log
-from handlers.staticsocket_handler import StaticSocketHandler
 
 
 TAG = "StaticSocketConnection"
@@ -59,8 +58,8 @@ class StaticSocketConnection(object):
             try:
                 callback(*args, **kwargs)
             except Exception as e:
-                Log.e(TAG, "callback execute error", e)
-        Log.d(TAG, "callbacks execution done")
+                Log.e(TAG, b"callback execute error", e)
+        Log.d(TAG, b"callbacks execution done")
 
     def on_close(self, *args, **kwargs):
         self._execute_callbacks(self._on_close_callbacks, *args, **kwargs)
@@ -97,19 +96,19 @@ class StaticSocketConnection(object):
                 self._handler, request.method.lower(), self._handler.r404
             )(*deli.path_args, **deli.path_kwargs)
         except httputil.HTTPInputError as e:
-            Log.e(TAG, "_handle_request error", e)
+            Log.e(TAG, b"_handle_request error", e)
 
     @tornado.gen.coroutine
     def _handle_response(self, data):
         try:
             response = httputil.parse_response_start_line(data)
-            Log.d(TAG, "_handle_response %r" % response)
+            Log.d(TAG, b"_handle_response %r" % response)
         except httputil.HTTPInputError as e:
-            Log.e(TAG, "_handle_response error", e)
+            Log.e(TAG, b"_handle_response error", e)
 
     @tornado.gen.coroutine
     def _handle_data(self, data):
-        if "HTTP" in data[:4]:
+        if b"HTTP" in data[:4]:
             # response
             yield self._handle_response(data)
         else:
@@ -140,6 +139,11 @@ class StaticSocketConnection(object):
             headers = httputil.HTTPHeaders.parse(data[eol:])
         except ValueError:
             raise httputil.HTTPInputError(
-                "Malformed HTTP headers: %r" % data
+                b"Malformed HTTP headers: %r" % data
             )
         return start_line, headers
+
+    def __del__(self):
+        # Will not be invoke if there is a memory leak somewhere
+        # TODO(s1z): Remove it when everything is done
+        Log.d(TAG, "__del__ %s" % StaticSocketConnection.__name__)

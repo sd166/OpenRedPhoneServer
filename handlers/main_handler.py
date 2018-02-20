@@ -1,22 +1,18 @@
 import tornado.gen
 import tornado.web
 from info.s1z.utils.log import Log
-from .staticsocket_handler import StaticSocketHandler
+from .static_handler import StaticSocketHandler
+
 
 TAG = "MainHandler"
-
-
-def wrap_static(*args, **kwargs):
-    raise NotImplementedError()
-
 
 
 class MainHandler(StaticSocketHandler):
 
     _active_session = None  # type: int  # Do we need it here?
-    account = None  # type: Account  # TODO(s1z): Create model
+    account = None  # type: Account  # TODO(s1z): Create a model
 
-    # Clients
+    # Managers
     relay = None
     push = None
     session = None
@@ -36,34 +32,47 @@ class MainHandler(StaticSocketHandler):
             )
 
     @tornado.gen.coroutine
-    def handle_create(self):
-        raise NotImplementedError()
+    def handle_create(self, device_id, number):
+        Log.d(TAG, "handle_create: %r, %r" % (device_id, number))
+        self.set_status(200)
+        self.finish()
 
     @tornado.gen.coroutine
-    def handle_ring(self):
-        raise NotImplementedError()
+    def handle_ring(self, device_id, number):
+        self.set_status(200)
+        self.finish()
 
     @tornado.gen.coroutine
-    def handle_busy(self):
-        raise NotImplementedError()
+    def handle_busy(self, device_id, number):
+        self.set_status(200)
+        self.finish()
 
     @tornado.gen.coroutine
-    def handle_delete(self):
-        raise NotImplementedError()
+    def handle_delete(self, device_id, number):
+        self.set_status(200)
+        self.finish()
 
-    def get(self, *args, **kwargs):
-        self.handle_create(*args, **kwargs)
+    @StaticSocketHandler.static
+    def get(self, device_id, number):
+        Log.d(TAG, "get")
+        return self.handle_create(device_id, number)
 
-    def ring(self, *args, **kwargs):
-        self.handle_ring(*args, **kwargs)
+    @StaticSocketHandler.static
+    def ring(self, device_id, number):
+        Log.d(TAG, "ring")
+        return self.handle_ring(device_id, number)
 
-    def busy(self, *args, **kwargs):
-        self.handle_busy(*args, **kwargs)
+    @StaticSocketHandler.static
+    def busy(self, device_id, number):
+        Log.d(TAG, "busy")
+        return self.handle_busy(device_id, number)
 
-    def delete(self, *args, **kwargs):
-        self.handle_delete(*args, **kwargs)
+    @StaticSocketHandler.static
+    def delete(self, device_id, number):
+        Log.d(TAG, "delete")
+        return self.handle_delete(device_id, number)
 
     def __del__(self):
         # Will not be invoke if there is a memory leak somewhere
         # TODO(s1z): Remove it when everything is done
-        Log.d(TAG, "__del__ %s" % MainHandler.__name__)
+        Log.d(TAG, b"__del__ %r" % MainHandler.__name__)
