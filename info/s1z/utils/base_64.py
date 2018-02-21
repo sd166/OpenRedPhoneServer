@@ -21,3 +21,17 @@ class Base64(object):
         if isinstance(data, (str, unicode)):
             data = data.encode("utf-8")
         return base64.b64decode(bytes(data) + b'===')
+
+    @staticmethod
+    def encode(data):
+        # type: ([str, unicode, bytes, bytearray]) -> bytes
+        if isinstance(data, (str, unicode)):
+            data = data.encode("utf-8")
+        return base64.b64encode(bytes(data))
+
+    @staticmethod
+    def decode(data):
+        # type: ([str, unicode, bytes, bytearray]) -> bytes
+        if isinstance(data, (str, unicode)):
+            data = data.encode("utf-8")
+        return base64.b64decode(bytes(data))

@@ -12,13 +12,13 @@ TAG = "StaticSocketHandler"
 
 class StaticSocketHandler(tornado.web.RequestHandler):
 
-    _status_code = None
+    _status_code = None  # type: int
     _static_connection = None  # type: StaticSocketConnection
-    open_args = None
-    open_kwargs = None
+    open_args = None  # type: tuple
+    open_kwargs = None  # type: dict
 
-    is_static = False
-    is_closed = False
+    is_static = False  # type: bool
+    is_closed = False  # type: bool
 
     @staticmethod
     def static(real_func):
@@ -36,12 +36,17 @@ class StaticSocketHandler(tornado.web.RequestHandler):
             if not self.is_static:
                 self.start_static()
                 real_func(self, *args, **kwargs)
+
         return wrapper
 
     @tornado.gen.coroutine
     def auth(self, callback):
         Log.d(TAG, "auth")
-        callback()
+        if "Authorization" in self.request.headers:
+            login, passw = get_loginpass(self.request.headers["Authorization"])
+            if login == self.login and passw == self.passw:
+                callback()
+                return
         #try:
         #    raise NotImplementedError()
         #except NotImplementedError as e:

@@ -7,17 +7,25 @@ import tornado.web
 import logging
 import settings as s
 from info.s1z.utils.log import Log
+from info.s1z import apsql as models
 from handlers.main_handler import MainHandler
+from utils.auth_manager import AuthManager
+from utils.redis_client import RedisClient
 
 
 TAG = "Main"
 
 
 def main():
+
+    psql = models.Model.set_parameters(**s.POSTGRES)
+    redis = RedisClient(**s.REDIS)
+
     initializer = dict(
         relay=object(),
         push=object(),
-        session=object()
+        session=object(),
+        auth=AuthManager(redis)
     )
     application = tornado.web.Application([
         (
